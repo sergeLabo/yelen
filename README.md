@@ -3,6 +3,12 @@ Un exemple d'application Android réalisée avec Kivy, avec une ergonomie profes
 
 Comment créer une application Android en Python avec Kivy.
 
+### Comprend
+
+* ActionBar
+* Scroll
+* ScreenManager
+
 ### La documentation sur le wiki ressources.labomedia.org
 
 [Yelen](https://ressources.labomedia.org/kivy_un_exemple_pour_les_pros_yelen)
