@@ -6,6 +6,8 @@
 old/
 .buildozer/
 bin/
+version.txt
+sof/
 
 # non exclus
 !buildozer.spec

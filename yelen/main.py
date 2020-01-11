@@ -36,10 +36,10 @@ Excécuté sur PC avec
     pour simuler le dpi du tel
 """
 
-__version__ = '0.54'
+__version__ = '0.70'
 
 """
-0.54 10sp
+0.70 avec size en option
 """
 
 # De la bibliothèque standard, ne pas les ajouter dans buildozer.spec
@@ -78,7 +78,7 @@ from kivy.uix.scrollview import ScrollView
 from kivy.clock import Clock
 
 
-class RecentsModifications:
+class RecentChanges:
 
     def __init__(self):
 
@@ -134,18 +134,12 @@ class RecentsModifications:
         return modifs_list
 
 class Screen2(Screen):
-    # #def __init__(self, **kwargs):
-        # #super().__init__(**kwargs)
     pass
 
 class Screen1(Screen):
-    # #def __init__(self, **kwargs):
-        # #super().__init__(**kwargs)
     pass
 
 class MainScreen(Screen):
-    # #def __init__(self, **kwargs):
-        # #super().__init__(**kwargs)
     pass
 
 class ScreenManager(ScreenManager):
@@ -155,52 +149,133 @@ class Yelen(BoxLayout):
 
     def __init__(self, app, **kwargs):
         super().__init__(**kwargs)
+
         self.app = app
 
-        text = self.get_modifs()
+        # Récup sur le wiki des modifications récentes
+        self.modifs = RecentChanges().modifs_list
+        # ou
+        # #modifs = ["Veni vedi vici, alea jacta est, Factum fieri infectum non potest. Julius Caesar "]*100
+        print("Nombre de lignes de RecentChanges:", len(self.modifs))
 
-        # #self.app.text = "Sans request\n"*100
-        self.app.text = text
+        # text et font_size sont définis dans le kv comme attributs de app
+        # il faut définir:
+        #     self.app.text et self.app.font_size_sp
+        self.font_size = int(self.app.config["font"]["font_size"])
+        self.font_size_sp = str(self.font_size) + "sp"
+        self.app.text = ""
 
-        print(self.app.text[:50])
+        self.format_text()
 
-    def get_modifs(self, *args):
-        modifs = RecentsModifications().modifs_list
-        print("Nombre de lignes de RecentsModifications:", len(modifs))
+    def format_text(self):
+        """Recalcule self.font_size et self.font_size_sp,
+        redéfinit self.app.text, self.app.font_size, self.app.font_size_sp
+        """
+        self.font_size = int(self.app.config["font"]["font_size"])
+        self.font_size_sp = str(self.font_size) + "sp"
+
+        chars_nb, maxi = self.get_chars_nb_maxi()
+
         text = ""
         a = 0
-        for line in modifs:
-            # Seulement 40 lignes, sinon le scroll bug
-            if a < 40:
-                line = textwrap.fill(line, 25)
+        for line in self.modifs:
+            if a < maxi:
+                line = textwrap.fill(line, chars_nb)
                 text += line + "\n\n"
                 a += 1
             else:
                 break
-        # print(len(text)) 1659
-        return text
+
+        self.app.font_size = self.font_size
+        self.app.font_size_sp = self.font_size_sp
+        self.app.text = text
+
+    def get_chars_nb_maxi(self):
+        """Droite avec coeff a, b
+        chars_nb
+            si 10 --> 60
+            si 40 --> 15
+            a= -0.67 b= 46.7
+        maxi
+            20 pour 40
+            80 pour 10
+            a= -2 b= 100
+        """
+
+        chars_nb = 75 - 1.5*self.font_size
+        chars_nb = int(chars_nb)
+        print("Nombre de caractères par ligne:", chars_nb)
+
+        maxi = 100 - 2*self.font_size
+        print("Nombre de lignes maxi:", maxi)
+
+        return chars_nb, maxi
+
 
 class YelenApp(App):
     """Cet objet est app dans le kv"""
 
-    text = StringProperty("Mon Texte Mon Texte Mon Texte Mon Texte Mon Texte Mon Texte \n"*100)
+    text = StringProperty("toto\n"*100)
+    font_size_sp = StringProperty("10sp")
 
     def build(self):
         # Le self permet d'accéder dans Yelen à app dans le kv !
+
         return Yelen(self)
 
+    def on_start(self):
+
+        self.root.format_text()
+
     def build_config(self, config):
+        print("build_config")
+        config.setdefaults("font", {"font_size": 20, "unit": "sp" })
 
-        config.setdefaults('kivy',
-                            { 'log_level': 'debug',
-                              'log_name': 'yelen_%y-%m-%d_%_.txt',
-                              'log_dir': '/sdcard',
-                              'log_enable': '1'})
+    def build_settings(self, settings):
+        print("build_settings")
+        data = '''[ { "type": "title", "title":"Taille des textes"},
 
-        config.setdefaults('postproc',
-                            { 'double_tap_time': 250,
-                              'double_tap_distance': 20})
+                    { "type": "numeric",
+                      "title": "Taille des textes",
+                      "desc": "De 10 à 40",
+                      "section": "font",
+                      "key": "font_size"},
+
+                    { "type": "string",
+                      "title": "Taille de la police en:",
+                      "desc": "sp ou dp",
+                      "section": "font",
+                      "key": "unit"}
+                      ]'''
+        settings.add_json_panel('Configuration de Yelen', self.config, data=data)
+
+    def on_config_change(self, config, section, key, value):
+        """Faire des
+        print(dir(self)) puis print(dir(self.toto)) avec des 'toto' astucieux
+        pour trouver: self.root.format_text()
+        """
+
+        if config is self.config:  # du joli python rigoureux
+            token = (section, key)
+
+            # Font size
+            if token == ('font', 'font_size'):
+                value = int(value)
+                if value < 0: value = 0
+                if value > 40: value = 40
+                print("Nouvelle taille de police:", value)
+                self.root.format_text()
 
 
 if __name__ == '__main__':
     YelenApp().run()
+
+
+        # ## Actualisation toutes les secondes
+        # #self.event = Clock.schedule_interval(self.update, 1)
+
+    # #def update(self, dt):
+        # #self.app.text = self.get_modifs()
+        # #self.get_font_size()
+        # #print(self.font_size_sp)
+        # #self.app.font_size_sp = self.font_size_sp
